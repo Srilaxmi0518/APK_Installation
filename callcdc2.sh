@@ -3,7 +3,7 @@ termux-wake-lock
 while true; do
 simnumber='+4915562758132'
 # Get all network interfaces
-interfaces=$(su -c "ip -o link show | awk -F': ' '{print \$2}' | cut -d'@' -f1 | sort -u")
+interfaces=$(su -c 'ip -o link show | awk -F": " "{print \$2}" | cut -d"@" -f1 | sort -u')
 
 # Function to check internet access for a specific IP
 check_internet_access_ipv4() {
