@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 while true; do
-simnumber='+4915562758132'
+simnumber='+4915566698097'
 # Get all network interfaces
 interfaces=$(su -c 'ip -o link show | awk -F": " "{print \$2}" | cut -d"@" -f1 | sort -u')
 
