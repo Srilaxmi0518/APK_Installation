@@ -36,7 +36,7 @@ internet_accessible=false
 check_flag() {
 # Iterate through each interface
 for interface in $interfaces; do
-current_epoch=$(date +%s%N)
+current_epoch=$(date +%s)
   ipv4=$(su -c "ip -4 addr show $interface | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v '^127\.'") 
   ipv6=$(su -c "ip -6 addr show $interface | awk '/inet6 / {print $2}' | cut -d/ -f1 | grep -v '^::1$' | grep -v '^fe80'")
 
