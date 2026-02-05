@@ -45,6 +45,7 @@ check_flag() {
 # Iterate through each interface
 for interface in $interfaces; do
 current_epoch=$(date +%s)
+current_epoch_ns=$(date +%s%N)
   ipv4=$(su -c "ip -4 addr show $interface | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v '^127\.'") 
   ipv6=$(su -c "ip -6 addr show $interface | awk '/inet6 / {print $2}' | cut -d/ -f1 | grep -v '^::1$' | grep -v '^fe80'")
 
@@ -65,7 +66,7 @@ curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxd
       echo "IPv6 Address: $ipv6"
       ipv6_access=$(check_internet_access_ipv6 $ipv6)
       echo "Internet access (IPv6): $ipv6_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 ipv6=\"$ipv6_access\",$current_epoch"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 ipv6=\"$ipv6_access\",$current_epoch_ns"
       flag=true
     else
       echo "IPv6 Address: Not found"
