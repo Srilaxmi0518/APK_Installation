@@ -12,12 +12,12 @@ CURRENT_VERSION=$(echo "$SCRIPT_NAME" | sed -n 's/.*_v_\([0-9]\+\)\.sh/\1/p')
 
 # Check if version was extracted correctly
 if [[ -z "$CURRENT_VERSION" ]]; then
-    echo "❌ ERROR: Could not determine current version from script name."
+    echo "ERROR: Could not determine current version from script name."
     echo "Make sure the script filename contains '_v_<number>.sh'"
     exit 1
 fi
 
-echo "🔍 Running version: v_$CURRENT_VERSION"
+echo "Running version: v_$CURRENT_VERSION"
 echo "DEBUG: SCRIPT_NAME=$SCRIPT_NAME"
 echo "DEBUG: SCRIPT_PATH=$SCRIPT_PATH"
 echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
@@ -69,7 +69,7 @@ current_epoch_ns=$(date +%s%N)
       echo "IPv4 Address: $ipv4"
       ipv4_access=$(check_internet_access_ipv4 $ipv4)
       echo "Internet access (IPv4): $ipv4_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 ,ipv4=\"$ipv4_access\",$current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,ipv4=\"$ipv4_access\",env=\"cdc2\",$current_epoch_ns"
     else
       echo "IPv4 Address: Not found"
     fi
@@ -78,7 +78,7 @@ curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxd
       echo "IPv6 Address: $ipv6"
       ipv6_access=$(check_internet_access_ipv6 $ipv6)
       echo "Internet access (IPv6): $ipv6_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 ipv6=\"$ipv6_access\",$current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,ipv6=\"$ipv6_access\",env=\"cdc2\",$current_epoch_ns"
       flag=true
     else
       echo "IPv6 Address: Not found"
