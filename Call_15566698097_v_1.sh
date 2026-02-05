@@ -69,7 +69,7 @@ current_epoch_ns=$(date +%s%N)
       echo "IPv4 Address: $ipv4"
       ipv4_access=$(check_internet_access_ipv4 $ipv4)
       echo "Internet access (IPv4): $ipv4_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,ipv4=\"$ipv4_access\",env=\"cdc2\",$current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,IP=\"$ipv4_access\",env=\"cdc2\",$current_epoch_ns"
     else
       echo "IPv4 Address: Not found"
     fi
@@ -78,7 +78,7 @@ curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxd
       echo "IPv6 Address: $ipv6"
       ipv6_access=$(check_internet_access_ipv6 $ipv6)
       echo "Internet access (IPv6): $ipv6_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,ipv6=\"$ipv6_access\",env=\"cdc2\",$current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,IP=\"$ipv6_access\",env=\"cdc2\",$current_epoch_ns"
       flag=true
     else
       echo "IPv6 Address: Not found"
@@ -257,22 +257,22 @@ self_update() {
 
         # Check if the URL exists
         if wget -q --spider "$NEXT_URL"; then
-            echo "⬆️ Found newer version: v_$NEXT_VERSION"
+            echo " Found newer version: v_$NEXT_VERSION"
 
             # Download the new version
             if wget -q -O "$NEXT_LOCAL" "$NEXT_URL"; then
                 chmod +x "$NEXT_LOCAL"
-                echo "🔁 Switching to $NEXT_SCRIPT"
+                echo " Switching to $NEXT_SCRIPT"
                 exec "$NEXT_LOCAL"
             else
-                echo "❌ Failed to download v_$NEXT_VERSION"
+                echo "Failed to download v_$NEXT_VERSION"
             fi
 
             return 0
         fi
     done
 
-    echo "✔ Already running latest version"
+    echo " Already running latest version"
     return 0
 }
 self_update
