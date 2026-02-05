@@ -242,8 +242,7 @@ fi
 
 
   count=$((count + 1))
-done
-
+self_update() {
 echo "Checking for newer versions..."
 
 # Look ahead for newer versions (adjust range if needed)
@@ -270,5 +269,9 @@ for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 20))); d
 done
 
 echo " Already running latest version"
+}
+self_update
+done
+
     
 done
