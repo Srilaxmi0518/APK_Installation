@@ -247,7 +247,8 @@ echo "Checking for newer versions..."
 
 # Look ahead for newer versions (adjust range if needed)
 for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 20))); do
-    NEXT_SCRIPT="${SCRIPT_NAME/_v_${CURRENT_VERSION}.sh/_v_${NEXT_VERSION}.sh}"
+    NEXT_SCRIPT=$(echo "$SCRIPT_NAME" | sed "s/_v_${CURRENT_VERSION}\.sh/_v_${NEXT_VERSION}.sh/")
+   #NEXT_SCRIPT="${SCRIPT_NAME/_v_${CURRENT_VERSION}.sh/_v_${NEXT_VERSION}.sh}"
     NEXT_URL="$REPO_BASE/$NEXT_SCRIPT"
     NEXT_LOCAL="$SCRIPT_DIR/$NEXT_SCRIPT"
 
