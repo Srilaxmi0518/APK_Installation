@@ -244,36 +244,31 @@ fi
   count=$((count + 1))
 done
 
-self_update() {
-    echo "Checking for newer versions..."
+echo "Checking for newer versions..."
 
-    # Look ahead for newer versions (adjust range if needed)
-    for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 20))); do
-        NEXT_SCRIPT="${SCRIPT_NAME/_v_${CURRENT_VERSION}.sh/_v_${NEXT_VERSION}.sh}"
-        NEXT_URL="$REPO_BASE/$NEXT_SCRIPT"
-        NEXT_LOCAL="$SCRIPT_DIR/$NEXT_SCRIPT"
+# Look ahead for newer versions (adjust range if needed)
+for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 20))); do
+    NEXT_SCRIPT="${SCRIPT_NAME/_v_${CURRENT_VERSION}.sh/_v_${NEXT_VERSION}.sh}"
+    NEXT_URL="$REPO_BASE/$NEXT_SCRIPT"
+    NEXT_LOCAL="$SCRIPT_DIR/$NEXT_SCRIPT"
 
-        echo "Checking version $NEXT_VERSION at $NEXT_URL..."
+    echo "Checking version $NEXT_VERSION at $NEXT_URL..."
 
-        # Check if the URL exists
-        if wget -q --spider "$NEXT_URL"; then
-            echo " Found newer version: v_$NEXT_VERSION"
+    # Check if the URL exists
+    if wget -q --spider "$NEXT_URL"; then
+        echo " Found newer version: v_$NEXT_VERSION"
 
-            # Download the new version
-            if wget -q -O "$NEXT_LOCAL" "$NEXT_URL"; then
-                chmod +x "$NEXT_LOCAL"
-                echo " Switching to $NEXT_SCRIPT"
-                exec "$NEXT_LOCAL"
-            else
-                echo "Failed to download v_$NEXT_VERSION"
-            fi
-
-            return 0
+        # Download the new version
+        if wget -q -O "$NEXT_LOCAL" "$NEXT_URL"; then
+            chmod +x "$NEXT_LOCAL"
+            echo " Switching to $NEXT_SCRIPT"
+            exec "$NEXT_LOCAL"
+        else
+            echo "Failed to download v_$NEXT_VERSION"
         fi
-    done
+    fi
+done
 
-    echo " Already running latest version"
-    return 0
-}
-self_update
+echo " Already running latest version"
+    
 done
