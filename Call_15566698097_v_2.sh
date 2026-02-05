@@ -10,6 +10,18 @@ SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 # Extract version number from filename
 CURRENT_VERSION=$(echo "$SCRIPT_NAME" | sed -n 's/.*_v_\([0-9]\+\)\.sh/\1/p')
 
+# Check if version was extracted correctly
+if [[ -z "$CURRENT_VERSION" ]]; then
+    echo "ERROR: Could not determine current version from script name."
+    echo "Make sure the script filename contains '_v_<number>.sh'"
+    exit 1
+fi
+
+echo "Running version: v_$CURRENT_VERSION"
+echo "DEBUG: SCRIPT_NAME=$SCRIPT_NAME"
+echo "DEBUG: SCRIPT_PATH=$SCRIPT_PATH"
+echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+
 # Get all network interfaces
 interfaces=$(su -c 'ip -o link show | awk -F": " "{print \$2}" | cut -d"@" -f1 | sort -u')
 
@@ -45,6 +57,7 @@ check_flag() {
 # Iterate through each interface
 for interface in $interfaces; do
 current_epoch=$(date +%s)
+current_epoch_ns=$(date +%s%N)
   ipv4=$(su -c "ip -4 addr show $interface | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v '^127\.'") 
   ipv6=$(su -c "ip -6 addr show $interface | awk '/inet6 / {print $2}' | cut -d/ -f1 | grep -v '^::1$' | grep -v '^fe80'")
 
@@ -56,7 +69,7 @@ current_epoch=$(date +%s)
       echo "IPv4 Address: $ipv4"
       ipv4_access=$(check_internet_access_ipv4 $ipv4)
       echo "Internet access (IPv4): $ipv4_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 ,ipv4=\"$ipv4_access\",$current_epoch"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,IP=\"$ipv4_access\",env=\"cdc2\",$current_epoch_ns"
     else
       echo "IPv4 Address: Not found"
     fi
@@ -65,7 +78,7 @@ curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxd
       echo "IPv6 Address: $ipv6"
       ipv6_access=$(check_internet_access_ipv6 $ipv6)
       echo "Internet access (IPv6): $ipv6_access"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 ipv6=\"$ipv6_access\",$current_epoch"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=DataRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,IP=\"$ipv6_access\",env=\"cdc2\",$current_epoch_ns"
       flag=true
     else
       echo "IPv6 Address: Not found"
@@ -232,29 +245,35 @@ fi
 done
 
 self_update() {
-     echo "Running version: v_$CURRENT_VERSION"
+    echo "Checking for newer versions..."
 
     # Look ahead for newer versions (adjust range if needed)
-    for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 5))); do
-        NEXT_SCRIPT="$(echo "$SCRIPT_NAME" | sed "s/_v_${CURRENT_VERSION}\.sh/_v_${NEXT_VERSION}.sh/")"
+    for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 20))); do
+        NEXT_SCRIPT="${SCRIPT_NAME/_v_${CURRENT_VERSION}.sh/_v_${NEXT_VERSION}.sh}"
         NEXT_URL="$REPO_BASE/$NEXT_SCRIPT"
         NEXT_LOCAL="$SCRIPT_DIR/$NEXT_SCRIPT"
 
-        if wget -q --spider "$NEXT_URL"; then
-            echo "⬆️ Found newer version: v_$NEXT_VERSION"
+        echo "Checking version $NEXT_VERSION at $NEXT_URL..."
 
+        # Check if the URL exists
+        if wget -q --spider "$NEXT_URL"; then
+            echo " Found newer version: v_$NEXT_VERSION"
+
+            # Download the new version
             if wget -q -O "$NEXT_LOCAL" "$NEXT_URL"; then
                 chmod +x "$NEXT_LOCAL"
-                echo "🔁 Switching to $NEXT_SCRIPT"
+                echo " Switching to $NEXT_SCRIPT"
                 exec "$NEXT_LOCAL"
             else
-                echo " Failed to download v_$NEXT_VERSION"
+                echo "Failed to download v_$NEXT_VERSION"
             fi
-            return
+
+            return 0
         fi
     done
 
     echo " Already running latest version"
+    return 0
 }
 self_update
 done
