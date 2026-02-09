@@ -34,13 +34,19 @@ with open(os.path.join(BASE, templates[0])) as f:
 
 # ---------- version logic ----------
 def next_version(mo):
-    pattern = re.compile(rf"call_{mo}_v_(\d+)\.sh")
-    versions = [
-        int(m.group(1))
-        for f in os.listdir(OUT)
-        if (m := pattern.match(f))
-    ]
+    versions = []
+    prefix = f"call_{mo}_v_"
+
+    for f in os.listdir(OUT):
+        if f.startswith(prefix) and f.endswith(".sh"):
+            try:
+                v = int(f[len(prefix):-3])
+                versions.append(v)
+            except ValueError:
+                pass
+
     return max(versions, default=0) + 1
+
 
 generated = []
 
