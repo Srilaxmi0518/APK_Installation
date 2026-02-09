@@ -3,7 +3,7 @@
 termux-wake-lock
 while true; do
 simnumber='+4915569268103'
-REPO_BASE="https://raw.githubusercontent.com/Srilaxmi0518/APK_Installation/main"
+REPO_BASE="https://raw.githubusercontent.com/Srilaxmi0518/APK_Installation/refs/heads/master/Versions"
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_PATH="$(realpath "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
