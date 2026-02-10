@@ -122,7 +122,8 @@ while true; do
 current_epoch_ns=$(date +%s%N)
 current_epoch=$(date +%s)
 #check_flag
-msisdn=$(su -c " content query --uri content://telephony/siminfo --projection number | grep -oE 'number=[+][0-9]+' | sed 's/number=//' | tail -n 1 ")
+msisdn=$(su -c "content query --uri content://telephony/siminfo --projection number | grep -oE 'number=[+][0-9]+' | sed 's/number=//' | tail -n 1 ")
+imei=$(su -c "getprop ro.ril.oem.imei | grep -oE '[0-9]+'")
 imsi=$(su -c "content query --uri content://telephony/siminfo --projection imsi | grep -oE 'imsi=[0-9]+' | sed 's/imsi=//' | tail -n 1")
 pacoip=$(su -c "dumpsys telephony.registry | grep -o ' LinkAddresses: \[ [0-9].*\/64 ] D'  | sed ' s/LinkAddresses: //' | sed 's/ D//'")
 # Determine if the device is connected to 4G or 5G
@@ -156,7 +157,7 @@ fi
 
 su -c 'am start -a android.intent.action.CALL -d tel:"'$simnumber'"'
 check_flag
-su -c 'service call isms 5 i32 0 s16 "com.android.mms.service" s16 "null" s16 "'$simnumber'" s16 "null" s16 "SMS" s16 "null" s16 "null" i32 1 i64 0'
+su -c 'service call isms 5 i32 0 s16 "com.android.mms.service" s16 "null" s16 "'$simnumber'" s16 "null" s16 "'$current_epoch' SMS" s16 "null" s16 "null" i32 1 i64 0'
 check_flag
 sms=$( su -c 'content query --uri content://sms/ --projection date,type --sort "date ASC" | sed "s/.*date=\(.*\)/\1/" | sed  "s/., type=\(.*\)/ \1/" |  tail -n 1')
 echo $sms sms
@@ -172,23 +173,24 @@ date -d @"$current_epoch"
 smstimediff=$(($current_epoch - $smstime))
 echo $smstimediff
 if [ "$smstimediff" -lt 50 ] && [ "$smssent" -eq 2 ]; then
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=SMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,msisdn=\"$simnumber\",imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=SMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 echo "$smstimediff sec SMS ok "
 else
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=SMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,msisdn=\"$simnumber\",imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=SMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 echo "SMS failed"
 fi
-#su -c"service call isms 5 i32 1 s16 "com.android.mms.service" s16 "null" s16 "+4915562758132" s16 "null" s16 "$current_epoch mms" s16 "null" s16 "null" i32 1 i32 0"
+###MMS#####
+su -c"service call isms 5 i32 1 s16 "com.android.mms.service" s16 "null" s16 "+4915562758132" s16 "null" s16 "$current_epoch mms" s16 "null" s16 "null" i32 1 i32 0"
 check_flag
-#mms=$( su -c "content query --uri content://mms/sent --projection date,type --sort "body DESC" | sed 's/.*date=\(.*\)/\1/'  | sed 's/., type=\(.*\)/ \1/' |  tail -n 1")
-#mmssent=$($mms | awk -F': ' '{print $2}')
-#mmstime=$($mms | awk -F': ' '{print $1}')
-#if ["$mmssent" -eq 2]; then
-#curl --request POST "http://89.246.171.250:8086/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 $mmstime"
-#else 
-#curl --request POST "http://89.246.171.250:8086/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1 $mmstime"
-#fi
-#curl --request POST "http://89.246.171.250:8086/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=s" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,msisdn=\"+49123456\"176123456,2a00:,NSA"
+mms=$( su -c "content query --uri content://mms/sent --projection date,type --sort "body DESC" | sed 's/.*date=\(.*\)/\1/'  | sed 's/., type=\(.*\)/ \1/' |  tail -n 1")
+mmssent=$($mms | awk -F': ' '{print $2}')
+mmstime=$($mms | awk -F': ' '{print $1}')
+if ["$mmssent" -eq 2]; then
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1 $mmstime,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+else
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1 $mmstime,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+fi
+#curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
   mCallState=$(su -c "dumpsys telephony.registry | grep 'mCallState' | sed 's/.*=\(.*\)/\1/' |  sed -n '1p' ")
 if [ "$mCallState" -eq 0 ]; then
       echo "IDLE"
@@ -220,17 +222,17 @@ if [ "$duration" -eq 0 ]; then
       su -c "content insert --uri content://call_log/calls --bind _id:i:$id --bind date:l:$current_epoch  --bind subscription_component_name:s:'UEFailure'"
       sleep 5
       check_flag
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,msisdn=\"$simnumber\",imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 elif [ "$duration" -gt 23 ] && [ "$mCallState" = 2 ]; then
     echo "Successful"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,msisdn=\"$simnumber\",imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 elif [ "$duration" -gt 10 ] && [ "$mCallState" = 0 ]; then
       echo "FWR/Drop/"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,msisdn=\"$simnumber\",imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns" 
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 check_flag
 elif [ "$duration" -gt 1 ] || [ "$duration" > -lt 23 ]; then
       echo "FWR/Drop"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,msisdn=\"$simnumber\",imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns" 
+curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 check_flag
 else
       echo "reason not found"
@@ -246,7 +248,7 @@ self_update() {
 echo "Checking for newer versions..."
 
 # Look ahead for newer versions (adjust range if needed)
-for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 20))); do
+for NEXT_VERSION in $(seq $((CURRENT_VERSION + 1)) $((CURRENT_VERSION + 5))); do
     NEXT_SCRIPT=$(echo "$SCRIPT_NAME" | sed "s/_v_${CURRENT_VERSION}\.sh/_v_${NEXT_VERSION}.sh/")
    #NEXT_SCRIPT="${SCRIPT_NAME/_v_${CURRENT_VERSION}.sh/_v_${NEXT_VERSION}.sh}"
     NEXT_URL="$REPO_BASE/$NEXT_SCRIPT"

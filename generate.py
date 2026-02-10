@@ -1,5 +1,15 @@
+import argparse
 import json, os, re, subprocess
 from datetime import datetime
+
+# ---------- args ----------
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--force",
+    action="store_true",
+    help="Force generate new version for all mappings"
+)
+args = parser.parse_args()
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE, "Versions")
@@ -47,12 +57,13 @@ def next_version(mo):
 
     return max(versions, default=0) + 1
 
-
 generated = []
 
-# ---------- generate only changed MT ----------
+# ---------- generate ----------
 for mo, mt in mapping.items():
-    if last.get(mo) == mt:
+
+    # NORMAL MODE → skip unchanged MT
+    if not args.force and last.get(mo) == mt:
         continue
 
     v = next_version(mo)
@@ -60,7 +71,7 @@ for mo, mt in mapping.items():
     path = os.path.join(OUT, filename)
 
     content = (
-        f"# Generated on {datetime.utcnow()}\n"
+        f"# Generated on {datetime.utcnow().isoformat()} UTC\n"
         + template.replace("{{MT}}", mt)
     )
 
@@ -78,3 +89,5 @@ with open(STATE, "w") as f:
 
 if not generated:
     print("No MT changes detected. Nothing generated.")
+elif args.force:
+    print("Force mode enabled: new versions generated for all MOs.")

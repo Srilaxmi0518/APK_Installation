@@ -1,5 +1,6 @@
 from flask import Flask, request, redirect, render_template_string
 import json, subprocess, sys
+from waitress import serve
 
 app = Flask(__name__)
 MAPPING = "Testdata.json"
@@ -30,6 +31,19 @@ MT: <input name="new_mt" required>
 <br><br>
 <button type="submit" name="action" value="add">Add & Generate</button>
 </form>
+
+<hr>
+
+<h3>Script Operations</h3>
+<form method="post">
+<button
+  type="submit"
+  name="action"
+  value="force"
+  onclick="return confirm('This will generate NEW versions for ALL MOs. Continue?');">
+  🔁 Update Script (All MOs)
+</button>
+</form>
 """
 
 @app.route("/", methods=["GET", "POST"])
@@ -46,6 +60,14 @@ def index():
                 if key in request.form:
                     mapping[mo] = request.form[key]
 
+            with open(MAPPING, "w") as f:
+                json.dump(mapping, f, indent=2)
+
+            subprocess.run(
+                [sys.executable, "generate.py"],
+                check=True
+            )
+
         elif action == "add":
             mo = request.form.get("new_mo").strip()
             mt = request.form.get("new_mt").strip()
@@ -53,16 +75,28 @@ def index():
             if mo in mapping:
                 return f"MO {mo} already exists", 400
 
-            mapping[mo] = mt  # 👈 add new entry
+            mapping[mo] = mt
 
-        with open(MAPPING, "w") as f:
-            json.dump(mapping, f, indent=2)
+            with open(MAPPING, "w") as f:
+                json.dump(mapping, f, indent=2)
 
-        # run generator
-        subprocess.run([sys.executable, "generate.py"], check=True)
+            subprocess.run(
+                [sys.executable, "generate.py"],
+                check=True
+            )
+
+        elif action == "force":
+            subprocess.run(
+                [sys.executable, "generate.py", "--force"],
+                check=True
+            )
 
         return redirect("/")
 
     return render_template_string(HTML, mapping=mapping)
 
-app.run(port=5000, debug=True)
+
+if __name__ == "__main__":
+    #app.run(host="[2a00:fbc:1250:1f51:5e78:ee66:3e4f:81f4]",port=5000, debug=True)
+    app.run(port=5000, debug=True)
+    #serve(app, host="::", port=5000)
