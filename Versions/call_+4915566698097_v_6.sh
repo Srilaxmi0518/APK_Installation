@@ -1,7 +1,8 @@
+# Generated on 2026-02-10T21:59:57.362004 UTC
 #!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 while true; do
-simnumber='{{MT}}'
+simnumber='+491793934532'
 REPO_BASE="https://raw.githubusercontent.com/Srilaxmi0518/APK_Installation/refs/heads/master/Versions"
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_PATH="$(realpath "$0")"
