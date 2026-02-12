@@ -180,16 +180,154 @@ curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxd
 echo "SMS failed"
 fi
 ###MMS#####
+
+MMS_COUNT_BEFORE=$(su -c 'content query --uri content://mms/sent' 2>/dev/null | wc -l)
+echo "[INFO] MMS sent rows before: $MMS_COUNT_BEFORE"
+
+
+is_device_locked() {
+    su -c 'dumpsys window | grep -i "mDreamingLockscreen=true"' >/dev/null 2>&1
+}
+
+unlock_if_needed() {
+    if is_device_locked; then
+        echo "[INFO] Device is locked, unlocking..."
+        su -c 'input keyevent 26'
+        sleep 0.5
+        su -c 'input swipe 300 1000 300 300'
+        sleep 1
+    else
+        echo "[INFO] Device already unlocked"
+    fi
+}
+
+check_flag() {
+    # Placeholder for your existing check_flag function
+    echo "[INFO] check_flag executed"
+}
+
+get_media_id() {
+    local IMG_NAME="$1"
+    IMG_ID=$(su -c "content query --uri content://media/external/images/media/ --where \"_display_name='$IMG_NAME'\"" \
+        | tr ',' '\n' \
+        | grep "^ _id=" \
+        | cut -d= -f2)
+    echo "$IMG_ID"
+}
+
+tap_send_button() {
+    # Dump UI and extract send button coordinates
+    su -c 'uiautomator dump /sdcard/ui.xml'
+    sleep 1
+    su -c 'sed "s/></>\n</g" /sdcard/ui.xml > /sdcard/ui_nodes.xml'
+
+    SEND_BOUNDS=$(su -c 'grep -E "content-desc=\"Send\"|text=\"MMS\"" /sdcard/ui_nodes.xml' \
+        | head -n 1 \
+        | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p')
+
+    if [ -z "$SEND_BOUNDS" ]; then
+        echo "[WARN] Send button not found (skipping tap)"
+    else
+        set -- $SEND_BOUNDS
+        X=$(( ($1 + $3) / 2 ))
+        Y=$(( ($2 + $4) / 2 ))
+        echo "[INFO] Sending MMS: tapping at $X,$Y"
+        su -c "input tap $X $Y"
+    fi
+}
+
+get_latest_mms_info() {
+    mms_info=$(su -c 'content query --uri content://mms --projection _id,msg_box,resp_st,date --sort "date DESC" | head -n 1' \
+        | sed -n 's/Row: *\([0-9][0-9]*\).*msg_box=\([0-9][0-9]*\).*resp_st=\([^,]*\).*date=\([0-9][0-9]*\).*/\1 \2 \3 \4/p')
+    echo "$mms_info"
+}
+
+# =========================================
+# ---- 🔓 Wake & unlock device ----
+# =========================================
+check_flag
+unlock_if_needed
+sleep 1
+
+# =========================================
+# ---- 📸 Screenshot for MMS ----
+# =========================================
+TS=$(date +%s)
+IMG_NAME="MMS_File_$TS.png"
+IMG_PATH="/sdcard/Download/$IMG_NAME"
+
+echo "[INFO] Taking screenshot: $IMG_PATH"
+su -c "screencap -p $IMG_PATH"
+sleep 1
+
+IMG_ID=$(get_media_id "$IMG_NAME")
+if [ -z "$IMG_ID" ]; then
+    echo "[WARN] Image ID not found"
+else
+    echo "[INFO] Media id: $IMG_ID"
+fi
+echo "[INFO] Media ID: $IMG_ID"
+
+# =========================================
+# ---- 📩 Open MMS composer ----
+# =========================================
+echo "[INFO] Opening MMS composer..."
+su -c "am start -a android.intent.action.SEND -t image/png --eu android.intent.extra.STREAM content://media/external/images/media/$IMG_ID --es address $simnumber -f 0x10000000"
+sleep 2
+
+# =========================================
+# ---- 🤖 Tap Send Button ----
+# =========================================
+tap_send_button
+echo "[INFO] MMS send attempted"
+
+# =========================================
+# ---- 📊 Get latest MMS info ----
+# =========================================
+mms_info=$(get_latest_mms_info)
+set -- $mms_info
+row=$1
+msg_box=$2
+resp_st=$3
+mms_date=$4
+echo "[INFO] Latest MMS info: row_id=$row, msg_box=$msg_box, resp_st=$resp_st, date=$mms_date"
+MMS_COUNT_AFTER=$(su -c 'content query --uri content://mms/sent' 2>/dev/null | wc -l)
+echo "[INFO] MMS sent rows after: $MMS_COUNT_AFTER"
+if [ "$MMS_COUNT_AFTER" -gt "$MMS_COUNT_BEFORE" ]; then
+    echo "[PASS] MMS submitted successfully"
+else
+    echo "[FAIL] MMS not submitted "
+fi
+# Optional: calculate time difference from current epoch
+current_epoch=$(date +%s)
+smstime=$mms_date
+smstimediff=$((current_epoch - smstime))
+echo "[INFO] MMS sent $smstimediff seconds ago"
+
+echo "MMS send time: $(date -d @$smstime)"
+echo "Current time: $(date -d @$current_epoch)"
+if [ -f "$IMG_PATH" ]; then
+    su -c "rm -f '$IMG_PATH'"
+    echo "[INFO] Screenshot file removed: $IMG_PATH"
+else
+    echo "[WARN] Screenshot file not found for cleanup"
+fi
+
+su -c "input keyevent KEYCODE_HOME"
+
 #su -c"service call isms 5 i32 1 s16 "com.android.mms.service" s16 "null" s16 "$simnumber" s16 "null" s16 "$current_epoch mms" s16 "null" s16 "null" i32 1 i32 0"
 #check_flag
 #mms=$( su -c "content query --uri content://mms/sent --projection date,type --sort "body DESC" | sed 's/.*date=\(.*\)/\1/'  | sed 's/., type=\(.*\)/ \1/' |  tail -n 1")
 #mmssent=$($mms | awk -F': ' '{print $2}')
 #mmstime=$($mms | awk -F': ' '{print $1}')
-#if ["$mmssent" -eq 2]; then
-#curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
-#else
-#curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
-#fi
+#if [ "$msg_box" -eq 2 ] && [ "$m_type" -eq 128 ]; then
+if [ "$msg_box" -eq 2 ]; then
+  echo "[PASS] MMS is in Outbox and of correct type "
+  curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+else
+  echo "[FAIL] MMS validation failed (msg_box=$msg_box, m_type=$m_type)"
+  curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+fi
 #curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=MMSRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mt_msisdn=\"$simnumber\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
   mCallState=$(su -c "dumpsys telephony.registry | grep 'mCallState' | sed 's/.*=\(.*\)/\1/' |  sed -n '1p' ")
 if [ "$mCallState" -eq 0 ]; then

@@ -87,6 +87,28 @@ state["last_mapping"] = mapping
 with open(STATE, "w") as f:
     json.dump(state, f, indent=2)
 
+if generated:
+    try:
+        subprocess.run(
+            ["git", "add"] + generated,
+            check=True
+        )
+
+        commit_msg = f"Auto-generate scripts ({len(generated)} files)"
+        subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            check=True
+        )
+        subprocess.run(
+            ["git", "push", "origin", "master"],
+            check=True
+        )
+        print("Git committed and push")
+    except subprocess.CalledProcessError as e:
+        print("Git commit failed:", e)
+else:
+    print("No new files to commit.")
+
 if not generated:
     print("No MT changes detected. Nothing generated.")
 elif args.force:
