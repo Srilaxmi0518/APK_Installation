@@ -192,9 +192,11 @@ is_device_locked() {
 unlock_if_needed() {
     if is_device_locked; then
         echo "[INFO] Device is locked, unlocking..."
-        su -c 'input keyevent 26'
+        #su -c 'input keyevent 26'
+        su -c 'input keyevent KEYCODE_WAKEUP'
         sleep 0.5
-        su -c 'input swipe 300 1000 300 300'
+        #su -c 'input swipe 300 1000 300 300'
+        su -c 'wm dismiss-keyguard'
         sleep 1
     else
         echo "[INFO] Device already unlocked"
@@ -341,7 +343,7 @@ else
 fi
 # Live Dashboard Update
 
-su -c 'input keyevent KEYCODE_ENDCALL'
+#su -c 'input keyevent KEYCODE_ENDCALL'
 su -c 'input keyevent KEYCODE_ENDCALL'
 sleep 5
 Call=$(su -c "content query --uri content://call_log/calls --projection "date:type:features:number:duration" |  tail -n 1")
@@ -360,18 +362,18 @@ if [ "$duration" -eq 0 ]; then
       su -c "content insert --uri content://call_log/calls --bind _id:i:$id --bind date:l:$current_epoch  --bind subscription_component_name:s:'UEFailure'"
       sleep 5
       check_flag
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
-elif [ "$duration" -gt 23 ] && [ "$mCallState" = 2 ]; then
+      curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+elif [ "$duration" -gt 10 ] && [ "$mCallState" = 2 ]; then
     echo "Successful"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
-elif [ "$duration" -gt 10 ] && [ "$mCallState" = 0 ]; then
-      echo "FWR/Drop/"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+    curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA passed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+#elif [ "$duration" -gt 10 ] && [ "$mCallState" = 0 ]; then
+#      echo "FWR/Drop/"
+#curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
 check_flag
-elif [ "$duration" -gt 1 ] || [ "$duration" > -lt 23 ]; then
+elif [ "$duration" -gt 1 ] || [ "$duration" > -lt 10 ]; then
       echo "FWR/Drop"
-curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
-check_flag
+      curl --request POST "https://stg-ras.1und1.symworld.symphony.rakuten.com/influxdb/api/v2/write?org=28b1289d1a5617bf&bucket=VoiceRemote&precision=ns" --header "Authorization: Token KdXTb4YF4kq0PiKrKeS_TjlRSH3yV7bqLi-MVtDOc2YuVGAsYYhlMSHT6JyMEr89OOmTOZAb7scFycDXQxCTjg==" --header "Content-Type: text/plain" --data "launch_status,host=serverA failed=1,mt_msisdn=\"$simnumber\",mo_msisdn=\"$msisdn\",mo_imei=\"$imei\",mo_imsi=\"$imsi\",PCI_4G_5G=\"[$ltepci/$nrpci]\",RSRP_4G_5G=\"[$ltersrp/$nrrsrp]\",ARFCN_4G_5G=\"[$ltearfcn/$nrarfcn]\",IP=\"$pacoip\",env=\"cdc2\",Net=\"$attach\",Sip=\"195\" $current_epoch_ns"
+    check_flag
 else
       echo "reason not found"
 fi
