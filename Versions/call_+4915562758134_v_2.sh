@@ -224,7 +224,7 @@ tap_send_button() {
     sleep 1
     su -c 'sed "s/></>\n</g" /sdcard/ui.xml > /sdcard/ui_nodes.xml'
 
-    SEND_BOUNDS=$(su -c 'grep -E "content-desc=\"Send\"|text=\"MMS\"" /sdcard/ui_nodes.xml' \
+    SEND_BOUNDS=$(su -c 'grep -E "content-desc=\"Send\"|content-desc=\"Send MMS\"|text=\"MMS\"" /sdcard/ui_nodes.xml' \
         | head -n 1 \
         | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p')
 
