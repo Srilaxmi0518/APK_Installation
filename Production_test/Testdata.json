@@ -1,0 +1,20 @@
+{
+  "+4915562758646": {
+    "mt": "+491793934532",
+    "services": {
+      "voice": { "enable": true, "duration": 20 },
+      "sms": { "enable": true },
+      "mms": { "enable": true },
+      "data": { "enable": true }
+    },
+    "+4915562758134": {
+    "mt": "+4915569268103",
+    "services": {
+      "voice": { "enable": true, "duration": 20 },
+      "sms": { "enable": true },
+      "mms": { "enable": true },
+      "data": { "enable": true }
+    }
+  }
+  }
+}
