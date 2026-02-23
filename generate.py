@@ -1,5 +1,5 @@
 import argparse
-import json, os, re, subprocess
+import json, os, subprocess, re
 from datetime import datetime
 
 # ---------- args ----------
@@ -15,6 +15,8 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE, "Versions")
 STATE = os.path.join(BASE, "state.json")
 MAPPING = os.path.join(BASE, "Testdata.json")
+BASE_SH = os.path.join(BASE, "Base_script.sh")
+
 os.makedirs(OUT, exist_ok=True)
 
 # ---------- load mapping ----------
@@ -26,56 +28,94 @@ if os.path.exists(STATE):
     with open(STATE) as f:
         state = json.load(f)
 
-last = state.get("last_mapping", {})
+last_mapping = state.get("last_mapping", {})
 
-# ---------- find template ----------
-templates = []
-for f in os.listdir(BASE):
-    if f.endswith(".sh"):
-        with open(os.path.join(BASE, f)) as fh:
-            if "{{MT}}" in fh.read():
-                templates.append(f)
+# ---------- read base.sh ----------
+with open(BASE_SH, "r", newline=None) as f:
+    base_script = f.read().replace("\r\n", "\n")
 
-if len(templates) != 1:
-    raise RuntimeError("Exactly one template .sh with {{MT}} required")
-
-with open(os.path.join(BASE, templates[0])) as f:
-    template = f.read()
 
 # ---------- version logic ----------
 def next_version(mo):
-    versions = []
     prefix = f"call_{mo}_v_"
+    versions = []
 
     for f in os.listdir(OUT):
         if f.startswith(prefix) and f.endswith(".sh"):
             try:
-                v = int(f[len(prefix):-3])
-                versions.append(v)
+                versions.append(int(f[len(prefix):-3]))
             except ValueError:
                 pass
 
     return max(versions, default=0) + 1
 
+
+# ---------- patch main_loop ----------
+def render_services(entry):
+    s = entry["services"]
+
+    lines = [
+        "        network_check"
+    ]
+
+    if s["data"]["enable"]:
+        lines.append("        data_service")
+
+    if s["voice"]["enable"]:
+        dur = s["voice"].get("duration", 20)
+        lines.append(f'        voice_service "{dur}"')
+
+    if s["sms"]["enable"]:
+        lines.append("        sms_service")
+
+    if s["mms"]["enable"]:
+        lines.append("        mms_service")
+
+    lines += [
+        "        self_update",
+        "        sleep 2"
+    ]
+
+    return "\n".join(lines)
+
+
+def render_script(entry):
+    content = base_script
+
+    # replace MT
+    content = content.replace("{{MT}}", entry["mt"])
+
+    # replace main_loop body
+    content = re.sub(
+        r"main_loop\(\)\s*{\s*while true; do.*?done\s*}",
+        lambda _: f"""main_loop() {{
+    while true; do
+{render_services(entry)}
+    done
+}}""",
+        content,
+        flags=re.S
+    )
+
+    return f"# Generated on {datetime.utcnow().isoformat()} UTC\n\n{content}"
+
 generated = []
 
 # ---------- generate ----------
-for mo, mt in mapping.items():
+for mo, entry in mapping.items():
+    last_entry = last_mapping.get(mo)
 
-    # NORMAL MODE → skip unchanged MT
-    if not args.force and last.get(mo) == mt:
+    # NORMAL MODE → skip unchanged MT + services
+    if not args.force and last_entry == entry:
         continue
 
     v = next_version(mo)
     filename = f"call_{mo}_v_{v}.sh"
     path = os.path.join(OUT, filename)
 
-    content = (
-        f"# Generated on {datetime.utcnow().isoformat()} UTC\n"
-        + template.replace("{{MT}}", mt)
-    )
+    content = render_script(entry)
 
-    with open(path, "w") as f:
+    with open(path, "w", newline="\n") as f:
         f.write(content)
 
     os.chmod(path, 0o755)
@@ -83,33 +123,25 @@ for mo, mt in mapping.items():
     print(f"Generated {path}")
 
 # ---------- update state ----------
-state["last_mapping"] = mapping
-with open(STATE, "w") as f:
-    json.dump(state, f, indent=2)
+if generated or args.force:
+    state["last_mapping"] = mapping
+    with open(STATE, "w") as f:
+        json.dump(state, f, indent=2)
 
+# ---------- git ----------
 if generated:
     try:
+        subprocess.run(["git", "add"] + generated, check=True)
         subprocess.run(
-            ["git", "add"] + generated,
+            ["git", "commit", "-m", f"Auto-generate scripts ({len(generated)} files)"],
             check=True
         )
-
-        commit_msg = f"Auto-generate scripts ({len(generated)} files)"
-        subprocess.run(
-            ["git", "commit", "-m", commit_msg],
-            check=True
-        )
-        subprocess.run(
-            ["git", "push", "origin", "master"],
-            check=True
-        )
-        print("Git committed and push")
+        subprocess.run(["git", "push", "origin", "master"], check=True)
+        print("Git committed and pushed")
     except subprocess.CalledProcessError as e:
         print("Git commit failed:", e)
 else:
-    print("No new files to commit.")
+    print("No changes detected. Nothing generated.")
 
-if not generated:
-    print("No MT changes detected. Nothing generated.")
-elif args.force:
-    print("Force mode enabled: new versions generated for all MOs.")
+if args.force:
+    print("Force mode enabled.")

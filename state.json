@@ -1,6 +1,148 @@
 {
+  "+4915562758646": {
+    "mt": "+491793934532",
+    "services": {
+      "voice": {
+        "enable": true,
+        "duration": 30
+      },
+      "sms": {
+        "enable": true
+      },
+      "mms": {
+        "enable": true
+      },
+      "data": {
+        "enable": true
+      }
+    }
+  },
+  "+4915562758134": {
+    "mt": "+4915569268103",
+    "services": {
+      "voice": {
+        "enable": true,
+        "duration": 20
+      },
+      "sms": {
+        "enable": true
+      },
+      "mms": {
+        "enable": true
+      },
+      "data": {
+        "enable": true
+      }
+    }
+  },
+  "+4915562758221": {
+    "mt": "+4915562758449",
+    "services": {
+      "voice": {
+        "enable": true,
+        "duration": 20
+      },
+      "sms": {
+        "enable": true
+      },
+      "mms": {
+        "enable": true
+      },
+      "data": {
+        "enable": true
+      }
+    }
+  },
+  "+4915566698097": {
+    "mt": "+491621391055",
+    "services": {
+      "voice": {
+        "enable": true,
+        "duration": 60
+      },
+      "sms": {
+        "enable": true
+      },
+      "mms": {
+        "enable": false
+      },
+      "data": {
+        "enable": true
+      }
+    }
+  },
   "last_mapping": {
-    "+4915562758646": "+4915569268103",
-    "+4915562758134": "+4915569268103"
+    "+4915562758646": {
+      "mt": "+491793934532",
+      "services": {
+        "voice": {
+          "enable": true,
+          "duration": 60
+        },
+        "sms": {
+          "enable": true
+        },
+        "mms": {
+          "enable": true
+        },
+        "data": {
+          "enable": true
+        }
+      }
+    },
+    "+4915562758134": {
+      "mt": "+4915569268103",
+      "services": {
+        "voice": {
+          "enable": true,
+          "duration": 60
+        },
+        "sms": {
+          "enable": true
+        },
+        "mms": {
+          "enable": true
+        },
+        "data": {
+          "enable": true
+        }
+      }
+    },
+    "+4915562758221": {
+      "mt": "+4915562758449",
+      "services": {
+        "voice": {
+          "enable": true,
+          "duration": 60
+        },
+        "sms": {
+          "enable": true
+        },
+        "mms": {
+          "enable": true
+        },
+        "data": {
+          "enable": true
+        }
+      }
+    },
+    "+4915566698097": {
+      "mt": "+491621391055",
+      "services": {
+        "voice": {
+          "enable": true,
+          "duration": 30
+        },
+        "sms": {
+          "enable": true
+        },
+        "mms": {
+          "enable": true
+        },
+        "data": {
+          "enable": true
+        }
+      }
+    }
   }
 }
